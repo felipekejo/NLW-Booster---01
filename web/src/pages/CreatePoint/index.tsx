@@ -90,6 +90,8 @@ const CreatePoint = () => {
 
   function handleSelectCity(event: ChangeEvent<HTMLSelectElement>) {
     const city = event.target.value
+
+    console.log(event.target)
     setSelectedCity(city);
   }
 

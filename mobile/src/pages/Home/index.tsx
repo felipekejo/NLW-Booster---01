@@ -1,26 +1,82 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect} from 'react';
 import { Feather as Icon } from '@expo/vector-icons'
-import { View , Image, StyleSheet, Text, ImageBackground, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View , Image, StyleSheet, Text, ImageBackground,  KeyboardAvoidingView, Platform, Picker } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler'
 import { useNavigation  } from '@react-navigation/native'
+import axios from 'axios'
+
+
+interface IBGEUFResponse{
+  sigla: string;
+};
+
+interface IBGECityResponse{
+  nome: string;
+};
 
 
 const Home = () => {
+
   const navigation = useNavigation();
 
-  const [ city, setCity] = useState('')
-  const [uf, setUf] = useState('')
+  const [ city, setCity] = useState<string[]>([])
+  const [uf, setUf] = useState<string[]>([])
 
+  const [initials, setInitials] = useState<string[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+
+  const [selectedUF, setSelectedUF] = useState('Selecione uma UF')
+  const [selectedCity, setSelectedCity] = useState('Selecione uma cidade')
+
+
+
+  // const Select = Picker.Item as any;
+
+  // function handleSelectUf(uf:string){
+  //   // const uf= event.target.value
+  //   console.log(uf)
+  //   setSelectedUF(uf);
+  // }
+  // function handleSelectCity(city:string) {
+  //   // const city = event.target.value
+  //   console.log(city)
+  //   setSelectedCity(city);
+  // }
 
   function handleNavigateToPoints() {
     navigation.navigate('Points',{
       uf,
       city
     })
+  
   }
+  
+
+  useEffect(() => {
+    axios.get<IBGEUFResponse[]>('https://servicodados.ibge.gov.br/api/v1/localidades/estados')
+      .then(response => {
+        const ufInitials = response.data.map(uf => uf.sigla).sort();
+
+        setInitials(ufInitials)
+      })
+  }, []);
+
+  useEffect(() => {
+    if (selectedUF === '0') {
+      return;
+    }
+    axios
+    .get<IBGECityResponse[]>(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUF}/municipios`)
+    .then(response => {
+      const cityNames = response.data.map(city => city.nome).sort();
+
+      setCities(cityNames);
+    });
+  }, [selectedUF]);
 
   return (
-    <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? 'padding' : undefined} >
+    <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? 'padding' : "padding"} >
+    
       <ImageBackground 
         source={require('../../assets/home-background.png')}  
         style= {styles.container}
@@ -34,23 +90,34 @@ const Home = () => {
           </View>  
         </View>
         <View style={styles.footer}>
-          <TextInput 
-          style={styles.input} 
-          placeholder='Digite a UF' 
-          value={uf}
-          maxLength={2}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          onChangeText={setUf}
-          />
-          <TextInput 
-          style={styles.input} 
-          placeholder='Digite a Cidade'
-          value={city}
-          autoCorrect={false}
-          onChangeText={setCity}
-          />
+    
+        
+          <Picker
+            selectedValue={selectedUF}
+            enabled={initials !== []}
+            style={styles.input}
+            onValueChange={(itemValue) => {setSelectedUF(itemValue); setUf(itemValue)}}
+          >
+            <Picker.Item label='Selecione uma UF' value='0'/>
+            {initials.map((uf) => (
+              <Picker.Item key={uf} label={uf} value={uf} />
+            ))}
+          </Picker>
 
+        
+        {selectedUF && (
+          <Picker
+            selectedValue={selectedCity}
+            enabled={selectedUF !== ''}
+            style={styles.input}
+            onValueChange={(itemValue) =>{ setSelectedCity(itemValue); setCity(itemValue)}}
+          >
+            <Picker.Item label='Selecione uma cidade' value='0'/>
+            {cities.map((city) => (
+              <Picker.Item key={city} label={city} value={city} />
+            ))}
+          </Picker>
+        )}
           <RectButton style={styles.button} onPress={handleNavigateToPoints}>
             <View style={styles.buttonIcon}>
               <Icon name="arrow-right" color="#fff" size={24} />
@@ -59,6 +126,7 @@ const Home = () => {
           </RectButton>
         </View>
       </ImageBackground>
+    
     </KeyboardAvoidingView>
     
     
